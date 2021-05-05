@@ -39,8 +39,8 @@ from bfx.design import *
 from bfx.readset import *
 
 from bfx import samtools_1_1
-#callers
-from bfx import star_seqr 
+# callers
+from bfx import star_seqr
 from bfx import arriba
 from bfx import star_fusion
 from bfx import defuse
@@ -48,16 +48,17 @@ from bfx import fusionmap
 from bfx import tophat2
 from bfx import integrate
 from bfx import ericscript
-from bfx import chimerascan 
-from bfx import metafusion 
-from bfx import metafusion_isohunter 
-from bfx import metafusion_clinical 
+from bfx import chimerascan
+from bfx import metafusion
+from bfx import metafusion_isohunter
+from bfx import metafusion_clinical
 
 from bfx import gunzip
 from bfx import merge_fastq
 from bfx import cff_conversion
 from bfx import merge_and_reannotate_cff_fusion
 from bfx import delete_fastqs
+from bfx import fusion_stats
 
 import utils
 
@@ -77,40 +78,43 @@ import utils
 
 log = logging.getLogger(__name__)
 
+
 class RnaFusion(common.Illumina):
     """
     RNAFusion Pipeline
     ================
-    The Gene Fusion pipeline identifies gene fusion events using RNA-seq FASTQ files. BAM/SAM files can also be used as input, which will then be converted to FASTQ format   
+    The Gene Fusion pipeline identifies gene fusion events using RNA-seq FASTQ files. BAM/SAM files can also be used as
+    input, which will then be converted to FASTQ format
     
     Four separate tools detect fusion events: 
     [deFuse](https://sourceforge.net/p/defuse/wiki/DeFuse/), 
-    [FusionMap](http://www.arrayserver.com/wiki/index.php?title=FusionMap), 
+    [FusionMap](https://www.arrayserver.com/wiki/index.php?title=FusionMap),
     [EricScript](https://sites.google.com/site/bioericscript/home), 
     and [INTEGRATE](https://sourceforge.net/p/integrate-fusion/wiki/Home/).
    
-    Note that the discord_read_trim parameter in the defuse configuration file should be set according to the mean fragment length.
-    See [HERE](https://sourceforge.net/p/defuse/wiki/FAQ/) for more information. You can get the mean fragment length for your sample
-    by running defuse, and then looking at the defuse log file in the job_output folder
+    Note that the discord_read_trim parameter in the defuse configuration file should be set according to the mean
+    fragment length. See [HERE](https://sourceforge.net/p/defuse/wiki/FAQ/) for more information. You can get the
+    mean fragment length for your sample by running defuse, and then looking at the defuse log file in the job_output
+    folder
  
     Tophat2 is used to generate precursor files for the INTEGRATE fusion detection tool.
      
-    The fusion detection results are combined into one common file (.cff) that gives information about gene fusions including gene names, 
-    type of fusion (ex. read through vs. gene fusion), and the tools that identified each fusion event. 
-    Additionally, if DNA sequencing information is available for the samples of interest, 
-    the Gene Fusion Pipeline can check for DNA support of gene fusions detected from RNA. 
+    The fusion detection results are combined into one common file (.cff) that gives information about gene fusions
+    including gene names, type of fusion (ex. read through vs. gene fusion), and the tools that identified each fusion
+    event. Additionally, if DNA sequencing information is available for the samples of interest, the Gene Fusion
+    Pipeline can check for DNA support of gene fusions detected from RNA.
     
     The RNAseq pipeline requires a sampleinfo file to be provided, which is a tab-delimited document with each sample 
-    as a line with information about sample disease. The first column gives sample name, second column gives the disease name,
-    third column tells whether the sample comes from a tumor (TP) or normal (NT) tissue. Additional columns can give further 
-    information about samples.
+    as a line with information about sample disease. The first column gives sample name, second column gives the disease
+    name, third column tells whether the sample comes from a tumor (TP) or normal (NT) tissue. Additional columns can
+    give further information about samples.
 
     In addition, a dnabam file must be provided, which gives the name of .bam file(s) associated with RNA-seq sample.
     If there is no DNA sequencing associated with the sample, provide the name of an empty file    
 
     For validation, an optional file containing fusion gene pairs can be provided with the --valfile flag. Used
-    only if the validate_fusions step is being run, and assumes that the input sequence data contains the fusions provided in 
-    the validation file. This step tests the effectiveness of the pipeline in detecting known fusions.
+    only if the validate_fusions step is being run, and assumes that the input sequence data contains the fusions
+    provided in the validation file. This step tests the effectiveness of the pipeline in detecting known fusions.
     
     Notes:
     -integrate and fusionmap are the least computationally intensive, ericscript is more intensive, 
@@ -128,11 +132,11 @@ class RnaFusion(common.Illumina):
     that have been passed to the pipeline main script.
     
     An example of the RNA-Seq report for an analysis on Public Corriel CEPH B-cell is available for illustration
-    purpose only: [RNA-Seq report](http://gqinnovationcenter.com/services/bioinformatics/tools/rnaReport/index.html).
+    purpose only: [RNA-Seq report](https://gqinnovationcenter.com/services/bioinformatics/tools/rnaReport/index.html).
     
     MORE INFORMATION ABOUT THE PIPELINE IS CURRENTLY NOT AVAILABLE. SHOULD THIS BE ADDED?
     [Here](https://bitbucket.org/mugqic/mugqic_pipelines/downloads/MUGQIC_Bioinfo_RNA-Seq.pptx) is more
-    [nfor]ation about the RNA-Seq pipeline that you may find interesting.
+    information about the RNA-Seq pipeline that you may find interesting.
 
     ... AND THIS POINT.    
     """
@@ -140,24 +144,27 @@ class RnaFusion(common.Illumina):
     def __init__(self):
         # Add pipeline specific arguments
         self.argparser.add_argument("--sampleinfo", help="sample info file", type=file)
-        #self.argparser.add_argument("--dnabam", help="DNA bam list", type=file)
+        # self.argparser.add_argument("--dnabam", help="DNA bam list", type=file)
         # add optional fusion validation file for pipeline validation mode
         self.argparser.add_argument("--valfile", required=False, help="fusion validation set file", type=file)
         self.argparser.add_argument("--callers", required=False, help="comma-separated string of callers to be used")
-        self.argparser.add_argument("--keep_bams", required=False,  action='store_true', help="if this flag is used, keep caller bams")
-        self.argparser.add_argument("--database", required=False, help="specifies database path for historical fusions, FP list and clinical fusions")
-        #Class variables
-        self.tool_list = ["star_seqr", "arriba", "star_fusion", "fusionmap", "ericscript", "integrate", "defuse"]
-        #self.tool_list = ["star_seqr", "arriba", "star_fusion", "fusionmap", "ericscript", "defuse"]
-        #self.tool_list = ["arriba", "star_fusion", "fusionmap", "ericscript", "integrate", "defuse"]
+        self.argparser.add_argument("--keep_bams", required=False, action='store_true',
+                                    help="if this flag is used, keep caller bams")
+        self.argparser.add_argument("--database", required=False,
+                                    help="specifies database path for historical fusions, FP list and clinical fusions")
+        # Class variables
+        self.tool_list = ["star_seqr", "arriba", "star_fusion", "fusionmap", "ericscript", "integrate", "defuse",
+                          "ciceros"]
+        # self.tool_list = ["star_seqr", "arriba", "star_fusion", "fusionmap", "ericscript", "defuse"]
+        # self.tool_list = ["arriba", "star_fusion", "fusionmap", "ericscript", "integrate", "defuse"]
         super(RnaFusion, self).__init__()
-
 
     def picard_sam_to_fastq(self):
         """
         Convert SAM/BAM files from the input readset file into FASTQ format
         if FASTQ files are not already specified in the readset file. Do nothing otherwise.
-        rerwritten from common.Illumina.picard_sam_to_fastq, make directory for this step under result folder in case the orginal bam file directory is not writtable
+        rewritten from common.Illumina.picard_sam_to_fastq, make directory for this step under result folder in case
+        the original bam file directory is not writable
         """
         jobs = []
         for readset in self.readsets:
@@ -165,7 +172,7 @@ class RnaFusion(common.Illumina):
             if not readset.fastq1:
                 if readset.cram:
                     # convert cram to bam then to fastq. fastq and bam are saved on localhd
-                    out_bam = os.path.join("$TMPDIR", os.path.basename(readset.cram)+".bam")
+                    out_bam = os.path.join("$TMPDIR", os.path.basename(readset.cram) + ".bam")
                     cram2bam_job = samtools_1_1.view(readset.cram, out_bam)
                     if readset.run_type == "PAIRED_END":
                         out_dir = os.path.join("fusions", "picard_sam_to_fastq", readset.sample.name)
@@ -173,29 +180,33 @@ class RnaFusion(common.Illumina):
                         fastq2 = os.path.join(out_dir, os.path.basename(re.sub("\.bam$", ".pair2.fastq.gz", out_bam)))
                     else:
                         raise Exception("Error: run type \"" + readset.run_type +
-                        "\" is invalid for readset \"" + readset.name + "\" (should be PAIRED_END or SINGLE_END)!")
+                                        "\" is invalid for readset \"" + readset.name +
+                                        "\" (should be PAIRED_END or SINGLE_END)!")
 
                     picard_job = picard.sam_to_fastq(out_bam, fastq1, fastq2)
                     job = concat_jobs([
                         Job(command="mkdir -p " + out_dir),
                         cram2bam_job,
                         picard_job
-                    ], name= "picard_sam_to_fastq." + readset.name)
+                        ], name="picard_sam_to_fastq." + readset.name)
                     jobs.append(job)
                 elif readset.bam:
                     if readset.run_type == "PAIRED_END":
                         out_dir = os.path.join("fusions", "picard_sam_to_fastq", readset.sample.name)
-                        fastq1 = os.path.join(out_dir, os.path.basename(re.sub("\.bam$", ".pair1.fastq.gz", readset.bam)))
-                        fastq2 = os.path.join(out_dir, os.path.basename(re.sub("\.bam$", ".pair2.fastq.gz", readset.bam)))
+                        fastq1 = os.path.join(out_dir,
+                                              os.path.basename(re.sub("\.bam$", ".pair1.fastq.gz", readset.bam)))
+                        fastq2 = os.path.join(out_dir,
+                                              os.path.basename(re.sub("\.bam$", ".pair2.fastq.gz", readset.bam)))
                     else:
                         raise Exception("Error: run type \"" + readset.run_type +
-                        "\" is invalid for readset \"" + readset.name + "\" (should be PAIRED_END or SINGLE_END)!")
+                                        "\" is invalid for readset \"" + readset.name +
+                                        "\" (should be PAIRED_END or SINGLE_END)!")
 
                     picard_job = picard.sam_to_fastq(readset.bam, fastq1, fastq2)
                     job = concat_jobs([
                         Job(command="mkdir -p " + out_dir),
                         picard_job
-                    ], name= "picard_sam_to_fastq." + readset.name)
+                        ], name="picard_sam_to_fastq." + readset.name)
                     jobs.append(job)
                 else:
                     raise Exception("Error: BAM file not available for readset \"" + readset.name + "\"!")
@@ -208,33 +219,37 @@ class RnaFusion(common.Illumina):
         jobs = []
         for readset in self.readsets:
             out_dir = os.path.join("fusions", "gunzip_fastq", readset.sample.name)
-            # Find input readset FASTQs first from previous trimmomatic job, then from original FASTQs in the readset sheet
+            # Find input readset FASTQs first from previous trimmomatic job,
+            # then from original FASTQs in the readset sheet
             if readset.run_type == "PAIRED_END":
                 candidate_input_files = []
                 if readset.fastq1 and readset.fastq2:
                     candidate_input_files.append([readset.fastq1, readset.fastq2])
                 if readset.bam:
                     picard_dir = os.path.join("fusions", "picard_sam_to_fastq", readset.sample.name)
-                    candidate_input_files.append([os.path.join(picard_dir, os.path.basename(re.sub("\.bam$", ".pair1.fastq.gz", readset.bam))), os.path.join(picard_dir, os.path.basename(re.sub("\.bam$", ".pair2.fastq.gz", readset.bam)))])
+                    candidate_input_files.append([os.path.join(picard_dir, os.path.basename(
+                        re.sub("\.bam$", ".pair1.fastq.gz", readset.bam))), os.path.join(picard_dir, os.path.basename(
+                        re.sub("\.bam$", ".pair2.fastq.gz", readset.bam)))])
                 if readset.cram:
                     picard_dir = os.path.join("fusions", "picard_sam_to_fastq", readset.sample.name)
-                    candidate_input_files.append([os.path.join(picard_dir, os.path.basename(readset.cram)+".pair1.fastq.gz"), os.path.join(picard_dir, os.path.basename(readset.cram)+".pair2.fastq.gz")])
+                    candidate_input_files.append(
+                            [os.path.join(picard_dir, os.path.basename(readset.cram) + ".pair1.fastq.gz"),
+                             os.path.join(picard_dir, os.path.basename(readset.cram) + ".pair2.fastq.gz")])
                 [fastq1, fastq2] = self.select_input_files(candidate_input_files)
             else:
                 raise Exception("Error: run type \"" + readset.run_type +
-                "\" is invalid for readset \"" + readset.name + "\" (should be PAIRED_END)!")
+                                "\" is invalid for readset \"" + readset.name + "\" (should be PAIRED_END)!")
             gunzip1_job = gunzip.gunzip_fastq(fastq1, out_dir)
             gunzip2_job = gunzip.gunzip_fastq(fastq2, out_dir)
             job = concat_jobs([
                 Job(command="mkdir -p " + out_dir),
                 gunzip1_job,
                 gunzip2_job
-            ], name="gunzip_fastq." + readset.sample.name + "." + readset.name)
+                ], name="gunzip_fastq." + readset.sample.name + "." + readset.name)
 
             jobs.append(job)
 
         return jobs
-
 
     def merge_fastq(self):
         """
@@ -248,8 +263,10 @@ class RnaFusion(common.Illumina):
                 fastq2_list = []
                 for readset in sample.readsets:
                     if readset.bam:
-                        fastq1 = os.path.join(input_dir, os.path.basename(re.sub("\.bam$", ".pair1.fastq", readset.bam)))
-                        fastq2 = os.path.join(input_dir, os.path.basename(re.sub("\.bam$", ".pair2.fastq", readset.bam)))
+                        fastq1 = os.path.join(input_dir,
+                                              os.path.basename(re.sub("\.bam$", ".pair1.fastq", readset.bam)))
+                        fastq2 = os.path.join(input_dir,
+                                              os.path.basename(re.sub("\.bam$", ".pair2.fastq", readset.bam)))
                     if readset.fastq1:
                         if readset.fastq1.endswith(".gz"):
                             # input files are gzipped fastqs
@@ -264,7 +281,7 @@ class RnaFusion(common.Illumina):
                 merge_fastq_job = merge_fastq.merge_fastq(fastq1_list, fastq2_list, input_dir)
                 job = concat_jobs([
                     merge_fastq_job,
-                ], name="merge_fastq." + sample.name)
+                    ], name="merge_fastq." + sample.name)
                 jobs.append(job)
 
         return jobs
@@ -275,12 +292,12 @@ class RnaFusion(common.Illumina):
         This function is called in the gene fusion caller functions.
         """
         input_dir = os.path.join("fusions", "gunzip_fastq", sample.name)
-          
-        if len(sample.readsets) > 1: # sample has more than 1 readset, use merged fastq
+
+        if len(sample.readsets) > 1:  # sample has more than 1 readset, use merged fastq
             fastq1 = os.path.join(input_dir, "merged.pair1.fastq")
             fastq2 = os.path.join(input_dir, "merged.pair2.fastq")
         else:
-            #input files are bams
+            # input files are bams
             readset = sample.readsets[0]
             if readset.bam:
                 fastq1 = os.path.join(input_dir, os.path.basename(re.sub("\.bam$", ".pair1.fastq", readset.bam)))
@@ -295,8 +312,8 @@ class RnaFusion(common.Illumina):
                     fastq1 = os.path.join(input_dir, os.path.basename(readset.fastq1))
                     fastq2 = os.path.join(input_dir, os.path.basename(readset.fastq2))
             if readset.cram:
-                fastq1 = os.path.join(input_dir, os.path.basename(readset.cram)+".pair1.fastq")
-                fastq2 = os.path.join(input_dir, os.path.basename(readset.cram)+".pair2.fastq")
+                fastq1 = os.path.join(input_dir, os.path.basename(readset.cram) + ".pair1.fastq")
+                fastq2 = os.path.join(input_dir, os.path.basename(readset.cram) + ".pair2.fastq")
         print >> sys.stderr, fastq1
         print >> sys.stderr, fastq2
         return fastq1, fastq2
@@ -309,12 +326,12 @@ class RnaFusion(common.Illumina):
         for sample in self.samples:
             fastq1, fastq2 = self.select_input_fastq(sample)
             out_dir = os.path.join("fusions", "chimerascan", sample.name)
-            chimerascan_job = chimerascan.run(fastq1, fastq2, out_dir )
+            chimerascan_job = chimerascan.run(fastq1, fastq2, out_dir)
             job = concat_jobs([
                 Job(command="mkdir -p " + out_dir),
                 Job(command="rm -r " + out_dir),
                 chimerascan_job
-            ], name="chimerascan." + sample.name)
+                ], name="chimerascan." + sample.name)
 
             jobs.append(job)
 
@@ -328,31 +345,33 @@ class RnaFusion(common.Illumina):
         for sample in self.samples:
             if len(sample.readsets) > 1:
                 raise Exception("Error: only one read set per sample allowed")
-            if sample.readsets[0].bam:#.bam input
+            if sample.readsets[0].bam:  # .bam input
                 fastq_dir = os.path.join("fusions", "picard_sam_to_fastq", sample.name)
                 bam = sample.readsets[0].bam
-                left_fastq=os.path.join(self._output_dir, fastq_dir, os.path.basename(re.sub("\.bam$", ".pair1.fastq.gz", bam)))
-                right_fastq=os.path.join(self._output_dir, fastq_dir, os.path.basename(re.sub("\.bam$", ".pair1.fastq.gz", bam)))
+                left_fastq = os.path.join(self._output_dir, fastq_dir,
+                                          os.path.basename(re.sub("\.bam$", ".pair1.fastq.gz", bam)))
+                right_fastq = os.path.join(self._output_dir, fastq_dir,
+                                           os.path.basename(re.sub("\.bam$", ".pair1.fastq.gz", bam)))
             elif sample.readsets[0].fastq2 and sample.readsets[0].fastq2.split(".")[-1] == "gz":
                 left_fastq = sample.readsets[0].fastq1
                 right_fastq = sample.readsets[0].fastq2
             else:
                 raise Exception("Error: only .bam and .fastq.gz inputs allowed")
             output_dir = os.path.join("fusions", "arriba", sample.name)
-            #JOBS
+            # JOBS
             chgdir_job = Job(command="cd " + output_dir)
             back_to_outdir_job = Job(command="cd " + self._output_dir)
-            #CONCAT
+            # CONCAT
             job = concat_jobs([
                 Job(command="mkdir -p " + output_dir),
                 chgdir_job,
                 arriba.run(left_fastq, right_fastq, self._output_dir, output_dir, keep_bam=self.args.keep_bams),
                 back_to_outdir_job
-            ], name="run_arriba." + sample.name)
+                ], name="run_arriba." + sample.name)
 
             job.samples = [sample]
             jobs.append(job)
- 
+
         return jobs
 
     def run_star_seqr(self):
@@ -363,20 +382,20 @@ class RnaFusion(common.Illumina):
 
         jobs = []
         for sample in self.samples:
-            if len(sample.readsets) > 1: 
-                raise Exception("Error: only one read set per sample allowed") 
-            if sample.readsets[0].bam:#.bam input
-                fastq_dir = os.path.join("fusions", "picard_sam_to_fastq", sample.name)     
+            if len(sample.readsets) > 1:
+                raise Exception("Error: only one read set per sample allowed")
+            if sample.readsets[0].bam:  # .bam input
+                fastq_dir = os.path.join("fusions", "picard_sam_to_fastq", sample.name)
                 bam = sample.readsets[0].bam
-                #fastq1 = os.path.join(out_dir, os.path.basename(re.sub("\.bam$", ".pair1.fastq.gz", out_bam)))
-                #fastq2 = os.path.join(out_dir, os.path.basename(re.sub("\.bam$", ".pair2.fastq.gz", out_bam)))
-                left_fastq=os.path.join(fastq_dir, os.path.basename(re.sub("\.bam$", ".pair1.fastq.gz", bam)))
-                right_fastq=os.path.join(fastq_dir, os.path.basename(re.sub("\.bam$", ".pair1.fastq.gz", bam)))
+                # fastq1 = os.path.join(out_dir, os.path.basename(re.sub("\.bam$", ".pair1.fastq.gz", out_bam)))
+                # fastq2 = os.path.join(out_dir, os.path.basename(re.sub("\.bam$", ".pair2.fastq.gz", out_bam)))
+                left_fastq = os.path.join(fastq_dir, os.path.basename(re.sub("\.bam$", ".pair1.fastq.gz", bam)))
+                right_fastq = os.path.join(fastq_dir, os.path.basename(re.sub("\.bam$", ".pair1.fastq.gz", bam)))
             elif sample.readsets[0].fastq2 and sample.readsets[0].fastq2.split(".")[-1] == "gz":
-                #print(sample.readsets[0].fastq2)
-                #print(sample.readsets[0].fastq2.split(".")[-1])
-                left_fastq = sample.readsets[0].fastq1 
-                right_fastq = sample.readsets[0].fastq2 
+                # print(sample.readsets[0].fastq2)
+                # print(sample.readsets[0].fastq2.split(".")[-1])
+                left_fastq = sample.readsets[0].fastq1
+                right_fastq = sample.readsets[0].fastq2
             else:
                 raise Exception("Error: only .bam and .fastq.gz inputs allowed")
             output_dir = os.path.join("fusions", "star_seqr", sample.name)
@@ -384,13 +403,12 @@ class RnaFusion(common.Illumina):
             job = concat_jobs([
                 Job(command="mkdir -p " + output_dir),
                 star_seqr.run(left_fastq, right_fastq, output_dir, sample.name, keep_bam=self.args.keep_bams)
-            ], name="run_star_seqr." + sample.name)
-        
+                ], name="run_star_seqr." + sample.name)
+
             job.samples = [sample]
             jobs.append(job)
 
         return jobs
-
 
     def star_fusion(self):
         """
@@ -401,17 +419,17 @@ class RnaFusion(common.Illumina):
         for sample in self.samples:
             fastq1, fastq2 = self.select_input_fastq(sample)
             out_dir = os.path.join("fusions", "star_fusion", sample.name)
-            #star_fusion_job = star_fusion.star_fusion(fastq1, fastq2, out_dir, CTAT_resource_lib)
-            star_fusion_job = star_fusion.star_fusion(fastq1, fastq2, CTAT_resource_lib, out_dir, keep_bam=self.args.keep_bams)
+            # star_fusion_job = star_fusion.star_fusion(fastq1, fastq2, out_dir, CTAT_resource_lib)
+            star_fusion_job = star_fusion.star_fusion(fastq1, fastq2, CTAT_resource_lib, out_dir,
+                                                      keep_bam=self.args.keep_bams)
             job = concat_jobs([
                 Job(command="mkdir -p " + out_dir),
                 star_fusion_job
-            ], name="star_fusion." + sample.name)
+                ], name="star_fusion." + sample.name)
 
             jobs.append(job)
 
         return jobs
-
 
     def defuse(self):
         """
@@ -425,12 +443,11 @@ class RnaFusion(common.Illumina):
             job = concat_jobs([
                 Job(command="mkdir -p " + out_dir),
                 defuse_job
-            ], name="defuse." + sample.name)
+                ], name="defuse." + sample.name)
 
             jobs.append(job)
 
         return jobs
-
 
     def fusionmap(self):
         """
@@ -449,13 +466,12 @@ class RnaFusion(common.Illumina):
                 Job(command="mkdir -p " + out_dir),
                 fusionmap_job,
                 Job(command="ls " + out_dir + "/02_RNA*")
-            
-            ], name="fusionmap." + sample.name)
+
+                ], name="fusionmap." + sample.name)
 
             jobs.append(job)
 
         return jobs
-
 
     def ericscript(self):
         """
@@ -470,12 +486,12 @@ class RnaFusion(common.Illumina):
                 Job(command="mkdir -p " + out_dir),
                 Job(command="rm -r " + out_dir),
                 ericscript_job
-            ], name="ericscript." + sample.name)
+                ], name="ericscript." + sample.name)
 
             jobs.append(job)
 
-        return jobs    
-    
+        return jobs
+
     def tophat2(self):
         """
         Run Tophat2 for Integrate. Determines accepted hits and unmapped reads, and outputs 
@@ -489,11 +505,9 @@ class RnaFusion(common.Illumina):
             job = concat_jobs([
                 Job(command="mkdir -p " + out_dir),
                 tophat2_job
-            ], name="tophat2." + sample.name)
-
+                ], name="tophat2." + sample.name)
             jobs.append(job)
-
-        return jobs    
+        return jobs
 
     def integrate(self):
         """
@@ -512,12 +526,10 @@ class RnaFusion(common.Illumina):
                 Job(command="cd " + out_dir),
                 integrate_job,
                 Job(command="cd -")
-            ], name="integrate." + sample.name)
-
+                ], name="integrate." + sample.name)
             jobs.append(job)
-
         return jobs
-    
+
     def integrate_make_result_file(self):
         """
         Merge infomation from breakpoints.tsv and reads.txt
@@ -529,12 +541,11 @@ class RnaFusion(common.Illumina):
             make_result_job = integrate.make_result_file(input_dir)
             job = concat_jobs([
                 make_result_job
-            ], name="integrate_make_result." + sample.name)
+                ], name="integrate_make_result." + sample.name)
 
             jobs.append(job)
 
-        return jobs    
-        
+        return jobs
 
     def convert_fusion_results_to_cff(self):
         """
@@ -544,31 +555,39 @@ class RnaFusion(common.Illumina):
         out_dir = os.path.join("fusions", "cff")
         job_list = [Job(command="mkdir -p " + out_dir)]
         sampleinfo_file = os.path.relpath(self.args.sampleinfo.name, self.output_dir)
-        
+
         for sample in self.samples:
-            
+
             # Define result files
-            #output_file = os.path.join(output_dir, prefix + "_STAR-SEQR", prefix  + "_STAR-SEQR_candidates.txt")
-            #star_seqr_result = os.path.join("fusions", "star_seqr", sample.name, "out_STAR-SEQR", "out_STAR-SEQR_candidates.txt")
+            # output_file = os.path.join(output_dir, prefix + "_STAR-SEQR", prefix  + "_STAR-SEQR_candidates.txt")
+            # star_seqr_result = os.path.join("fusions", "star_seqr", sample.name,
+            #                                 "out_STAR-SEQR", "out_STAR-SEQR_candidates.txt")
             star_seqr_result = os.path.join("fusions", "star_seqr", sample.name, "out_STAR-SEQR_candidates.txt")
-            #print >> sys.stderr, star_seqr_result 
+            # print >> sys.stderr, star_seqr_result
             arriba_result = os.path.join("fusions", "arriba", sample.name, "fusions.tsv")
-            #star_fusion_result = os.path.join("fusions", "star_fusion", sample.name, "star-fusion.fusion_predictions.abridged.tsv")
-            star_fusion_result = os.path.join("fusions", "star_fusion", sample.name, "star-fusion.fusion_predictions.abridged.coding_effect.tsv")
+            # star_fusion_result = os.path.join("fusions", "star_fusion",
+            #                                   sample.name, "star-fusion.fusion_predictions.abridged.tsv")
+            star_fusion_result = os.path.join("fusions", "star_fusion", sample.name,
+                                              "star-fusion.fusion_predictions.abridged.coding_effect.tsv")
             defuse_result = os.path.join("fusions", "defuse", sample.name, "results.filtered.tsv")
             fusionmap_result = os.path.join("fusions", "fusionmap", sample.name, "02_RNA.FusionReport.txt")
             ericscript_result = os.path.join("fusions", "ericscript", sample.name, "fusion.results.filtered.tsv")
             integrate_result = os.path.join("fusions", "integrate", sample.name, "breakpoints.cov.tsv")
             # Build tool_results list based on self.tool_list
-            result_file_dict = {"star_seqr": star_seqr_result, "arriba": arriba_result, 
-                                "star_fusion": star_fusion_result, "defuse": defuse_result, 
-                                "fusionmap": fusionmap_result, "ericscript": ericscript_result, 
-                                "integrate": integrate_result
+            result_file_dict = {"star_seqr":   star_seqr_result, "arriba": arriba_result,
+                                "star_fusion": star_fusion_result, "defuse": defuse_result,
+                                "fusionmap":   fusionmap_result, "ericscript": ericscript_result,
+                                "integrate":   integrate_result
                                 }
             tool_results = [(key, result_file_dict[key]) for key in result_file_dict.keys() if key in self.tool_list]
-            #tool_results = [("star_seqr",star_seqr_result), ("arriba", arriba_result), ("star_fusion", star_fusion_result), ("defuse", defuse_result), ("fusionmap", fusionmap_result), ("ericscript", ericscript_result), ("integrate", integrate_result)]
-            #tool_results = [("arriba", arriba_result), ("star_fusion", star_fusion_result), ("defuse", defuse_result), ("fusionmap", fusionmap_result), ("ericscript", ericscript_result), ("integrate", integrate_result)]
-            #determine sample_type
+            # tool_results = [("star_seqr",star_seqr_result), ("arriba", arriba_result),
+            #                 ("star_fusion", star_fusion_result), ("defuse", defuse_result),
+            #                 ("fusionmap", fusionmap_result), ("ericscript", ericscript_result),
+            #                 ("integrate", integrate_result)]
+            # tool_results = [("arriba", arriba_result), ("star_fusion", star_fusion_result),
+            #                 ("defuse", defuse_result), ("fusionmap", fusionmap_result),
+            #                 ("ericscript", ericscript_result), ("integrate", integrate_result)]
+            # determine sample_type
             """
             sample_type = ""
             for contrast in self.contrasts:
@@ -581,8 +600,8 @@ class RnaFusion(common.Illumina):
                     break    
             if not sample_type:
                 raise Exception("Error: sample " + sample.name + " not found in design file " + self.args.design.name)
-            """   
-            #convert caller output files to common fusion format(cff) 
+            """
+            # convert caller output files to common fusion format(cff)
             for tool, result_file in tool_results:
                 job = cff_conversion.cff_convert(sample.name, result_file, sampleinfo_file, tool, out_dir)
                 job.command = job.command.strip()
@@ -599,13 +618,16 @@ class RnaFusion(common.Illumina):
         cff_files = []
         cff_dir = os.path.join("fusions", "cff")
         out_dir = os.path.join("fusions", "cff")
-        # put defuse .cff file last, which means inverted defuse calls will be always be "fusion2" in "generate_common_fusion_stats_by_breakpoints" function of pygeneann.py. This makes sense, since defuse is only one to make "flipped/inverted" calls. If defuse is not "fusion2" this results in errors in the case where defuse makes a flipped call
-        #tool_list = ["star_seqr", "arriba", "star_fusion", "fusionmap", "ericscript", "integrate", "defuse"]
+        # put defuse .cff file last, which means inverted defuse calls will be always be "fusion2" in
+        # "generate_common_fusion_stats_by_breakpoints" function of pygeneann.py.
+        # This makes sense, since defuse is only one to make "flipped/inverted" calls.
+        # If defuse is not "fusion2" this results in errors in the case where defuse makes a flipped call
+        # tool_list = ["star_seqr", "arriba", "star_fusion", "fusionmap", "ericscript", "integrate", "defuse"]
         for tool in self.tool_list:
             cff_files.extend([os.path.join(cff_dir, sample.name + "." + tool + ".cff") for sample in self.samples])
         merge_job = merge_and_reannotate_cff_fusion.merge_cff_fusion(cff_files, out_dir)
-        
-        job = concat_jobs([ merge_job ], name="merge_cff_fusion")
+
+        job = concat_jobs([merge_job], name="merge_cff_fusion")
         jobs.append(job)
         return jobs
 
@@ -615,7 +637,7 @@ class RnaFusion(common.Illumina):
         """
         jobs = []
         cff_dir = os.path.join("fusions", "cff")
-        out_dir= os.path.join("fusions", "fusion_stats")
+        out_dir = os.path.join("fusions", "fusion_stats")
         sampleinfo_file = os.path.relpath(self.args.sampleinfo.name, self.output_dir)
 
         fusion_stats_job = fusion_stats.fusion_stats(cff_dir, out_dir, sampleinfo_file)
@@ -626,7 +648,7 @@ class RnaFusion(common.Illumina):
             fusion_stats_job,
             category_table_job,
             category_barplot_job
-        ], name="fusion_stats")
+            ], name="fusion_stats")
 
         jobs.append(job)
         return jobs
@@ -639,16 +661,15 @@ class RnaFusion(common.Illumina):
         cff_dir_abspath = os.path.join(self._output_dir, "fusions", "cff")
         out_dir_abspath = os.path.join(self._output_dir, "fusions", "metafusion")
         metafusion_job = metafusion.run_metafusion_singularity(out_dir_abspath)
-        #metafusion_job.name = "MetaFusion"
+        # metafusion_job.name = "MetaFusion"
         job = concat_jobs([
             Job(command="mkdir -p " + out_dir_abspath),
-            metafusion_job 
-        ], name="MetaFusion")
+            metafusion_job
+            ], name="MetaFusion")
 
         jobs.append(job)
-        
-        return jobs
 
+        return jobs
 
     def MetaFusion_IsoHunter(self):
         """
@@ -656,12 +677,12 @@ class RnaFusion(common.Illumina):
         """
         jobs = []
         out_dir_abspath = self._output_dir
-        isohunter_outdir = os.path.join("fusions", "metafusion_isohunter") 
+        isohunter_outdir = os.path.join("fusions", "metafusion_isohunter")
         metafusion_job = metafusion_isohunter.run_isohunter_singularity(out_dir_abspath)
         job = concat_jobs([
             Job(command="mkdir -p " + isohunter_outdir),
             metafusion_job
-        ], name="MetaFusion.IsoHunter")
+            ], name="MetaFusion.IsoHunter")
 
         jobs.append(job)
 
@@ -678,12 +699,11 @@ class RnaFusion(common.Illumina):
         job = concat_jobs([
             Job(command="mkdir -p " + metafusion_outdir),
             metafusion_job
-        ], name="MetaFusion.clinical")
+            ], name="MetaFusion.clinical")
 
         jobs.append(job)
 
         return jobs
-
 
     def delete_fastqs(self):
         """
@@ -691,29 +711,31 @@ class RnaFusion(common.Illumina):
         """
         jobs = []
         for sample in self.samples:
-            defuse_result = os.path.join("fusions", "defuse", sample.name, "results.filtered.tsv")            
-            fusionmap_result = os.path.join("fusions", "fusionmap", sample.name, "02_RNA.FusionReport.txt")   
+            defuse_result = os.path.join("fusions", "defuse", sample.name, "results.filtered.tsv")
+            fusionmap_result = os.path.join("fusions", "fusionmap", sample.name, "02_RNA.FusionReport.txt")
             ericscript_result = os.path.join("fusions", "ericscript", sample.name, "fusion.results.filtered.tsv")
-            integrate_result = os.path.join("fusions", "integrate", sample.name, "breakpoints.cov.tsv")       
+            integrate_result = os.path.join("fusions", "integrate", sample.name, "breakpoints.cov.tsv")
             star_seqr_result = os.path.join("fusions", "star_seqr", sample.name, "out_STAR-SEQR_candidates.txt")
             arriba_result = os.path.join("fusions", "arriba", sample.name, "fusions.tsv")
-            star_fusion_result = os.path.join("fusions", "star_fusion", sample.name, "star-fusion.fusion_predictions.abridged.coding_effect.tsv")
+            star_fusion_result = os.path.join("fusions", "star_fusion", sample.name,
+                                              "star-fusion.fusion_predictions.abridged.coding_effect.tsv")
 
-            #result_file_list = [defuse_result, fusionmap_result, ericscript_result, integrate_result, star_seqr_result, arriba_result, star_fusion_result] 
+            # result_file_list = [defuse_result, fusionmap_result, ericscript_result, integrate_result,
+            #                     star_seqr_result, arriba_result, star_fusion_result]
             result_file_list = [defuse_result, fusionmap_result]
-            del_job = delete_fastqs.delete_fastqs(sample.name, result_file_list) 
+            del_job = delete_fastqs.delete_fastqs(sample.name, result_file_list)
             job = concat_jobs([
                 Job(command="mkdir -p delete_fastqs"),
                 del_job
-            ], name="delete_fastqs." + sample.name)
-            #job = concat_jobs([
+                ], name="delete_fastqs." + sample.name)
+            # job = concat_jobs([
             #    Job(command="mkdir -p delete_fastqs")
-            #], name="delete_fastqs." + sample.name)
+            # ], name="delete_fastqs." + sample.name)
             jobs.append(job)
             # DELETE BAMS JOB (one across all samples)
         del_bams_job = concat_jobs([
-               delete_fastqs.delete_bams(result_file_list, self._output_dir)
-               ], name="delete_bams") 
+            delete_fastqs.delete_bams(result_file_list, self._output_dir)
+            ], name="delete_bams")
         jobs.append(del_bams_job)
         return jobs
 
@@ -734,12 +756,13 @@ class RnaFusion(common.Illumina):
             self.integrate_make_result_file,
             self.convert_fusion_results_to_cff,
             self.merge_cff_fusion,
-    #        self.MetaFusion,
+            #        self.MetaFusion,
             self.MetaFusion_clinical,
             self.delete_fastqs,
             self.MetaFusion_IsoHunter,
             self.chimerascan
-        ]
+            ]
+
 
 if __name__ == '__main__':
     RnaFusion()
