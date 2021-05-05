@@ -153,8 +153,7 @@ class RnaFusion(common.Illumina):
         self.argparser.add_argument("--database", required=False,
                                     help="specifies database path for historical fusions, FP list and clinical fusions")
         # Class variables
-        self.tool_list = ["star_seqr", "arriba", "star_fusion", "fusionmap", "ericscript", "integrate", "defuse",
-                          "ciceros"]
+        self.tool_list = ["star_seqr", "arriba", "star_fusion", "fusionmap", "ericscript", "integrate", "defuse"]
         # self.tool_list = ["star_seqr", "arriba", "star_fusion", "fusionmap", "ericscript", "defuse"]
         # self.tool_list = ["arriba", "star_fusion", "fusionmap", "ericscript", "integrate", "defuse"]
         super(RnaFusion, self).__init__()
