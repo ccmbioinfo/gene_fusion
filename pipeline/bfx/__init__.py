@@ -15,7 +15,8 @@ __all__ = [
     "ray",
     "readset",
     "rrna_amplicons",
-    "run_processing_aligner"
+    "run_processing_aligner",
+    "fusion_stats",
     "sample",
     "samtools",
     "sequence_dictionary",
