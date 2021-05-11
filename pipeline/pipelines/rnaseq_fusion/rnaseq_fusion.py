@@ -445,7 +445,7 @@ class RnaFusion(Illumina):
                                                    "Aligned.sortedByCoord.dedup.bam"),
                                       os.path.join(self._output_dir, cicero_dir,
                                                    "Aligned.junctions.tab.shifted.tab")],
-                         output_files=[],
+                         output_files=[os.path.join(align_dir, "".join([sample.name, ".ciceros.cff"]))],
                          module_entries=[("run_cicero", "module_cicero")],
                          name="cicero_run",
                          command="""singularity exec --cleanenv -B /hpf:/hpf \\$CICERO_PATH/CICERO_1.4.2.sif \\
