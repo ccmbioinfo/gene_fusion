@@ -460,7 +460,8 @@ class RnaFusion(Illumina):
 
             job_mkdir = Job(command="mkdir -p {trim} {align} {cicero}".format(
                     trim=trim_dir, align=align_dir, cicero=cicero_dir))
-            jobs.append(concat_jobs([job_mkdir, trim, align, index, dedup, rna_peg, cicero], name="cicero"))
+            jobs.append(concat_jobs([job_mkdir, trim, align, index, dedup, rna_peg, cicero],
+                                    name="run_cicero." + sample.name))
         return jobs
 
     def run_star_seqr(self):
