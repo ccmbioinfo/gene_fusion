@@ -434,12 +434,18 @@ class RnaFusion(Illumina):
                                                      "Aligned.junctions.tab.shifted.tab")],
                           module_entries=[("run_cicero", "module_rnapeg")],
                           name="RNApeg",
-                          command="RNApeg -b {bamfile} -f {ref} -r {reflat} -o {outpath}".format(
+                          command="""mv {idx_file} {new_idx_file} && \\
+                          RNApeg -b {bamfile} -f {ref} -r {reflat} -o {outpath}""".format(
                                   bamfile=os.path.join(self._output_dir, align_dir,
                                                        "Aligned.sortedByCoord.dedup.bam"),
                                   ref=config.param("run_cicero", "reference", required=True),
                                   reflat=config.param("run_cicero", "reflat", required=True),
-                                  outpath=os.path.join(self._output_dir, cicero_dir)))
+                                  outpath=os.path.join(self._output_dir, cicero_dir),
+                                  idx_file=re.sub(r"\.bam", ".bai",
+                                                  os.path.join(self._output_dir, align_dir,
+                                                               "Aligned.sortedByCoord.dedup.bam")),
+                                  new_idx_file=os.path.join(self._output_dir, align_dir,
+                                                               "Aligned.sortedByCoord.dedup.bam")+".bai"))
             # Cicero
             cicero = Job(input_files=[os.path.join(self._output_dir, align_dir,
                                                    "Aligned.sortedByCoord.dedup.bam"),
