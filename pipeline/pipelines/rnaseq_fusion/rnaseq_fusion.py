@@ -435,13 +435,13 @@ class RnaFusion(Illumina):
                           module_entries=[("run_cicero", "module_rnapeg")],
                           name="RNApeg",
                           command="RNApeg -b {bamfile} -f {ref} -r {reflat} -o {outpath}".format(
-                                  bamfile=os.path.join(self._output_dir, align_dir, sample.name,
+                                  bamfile=os.path.join(self._output_dir, align_dir,
                                                        "Aligned.sortedByCoord.dedup.bam"),
                                   ref=config.param("run_cicero", "reference", required=True),
                                   reflat=config.param("run_cicero", "reflat", required=True),
                                   outpath=os.path.join(self._output_dir, cicero_dir)))
             # Cicero
-            cicero = Job(input_files=[os.path.join(self._output_dir, align_dir, sample.name,
+            cicero = Job(input_files=[os.path.join(self._output_dir, align_dir,
                                                    "Aligned.sortedByCoord.dedup.bam"),
                                       os.path.join(self._output_dir, cicero_dir,
                                                    "Aligned.junctions.tab.shifted.tab")],
@@ -451,7 +451,7 @@ class RnaFusion(Illumina):
                          command="""singularity exec --cleanenv -B /hpf:/hpf \\$CICERO_PATH/CICERO_1.4.2.sif \\
     Cicero.sh -n {threads} -b {bamfile} -g {genome} -r {reference} -j {junction}""".format(
                                  threads=config.param("run_cicero", "threads", required=True),
-                                 bamfile=os.path.join(self._output_dir, align_dir, sample.name,
+                                 bamfile=os.path.join(self._output_dir, align_dir,
                                                       "Aligned.sortedByCoord.dedup.bam"),
                                  genome=config.param("run_cicero", "genome", required=True),
                                  reference=config.param("run_cicero", "cicero_data", required=True),
