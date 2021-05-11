@@ -32,7 +32,7 @@ def cff_convert(sample, fusion_result_file, sample_info_file, tool, out_dir, ini
         [os.path.join(out_dir, sample+"."+tool+".cff")],
         [['cff_conversion', 'module_fusiontools']],
         command="""\
-/hpf/largeprojects/ccmbio/mapostolides/MetaFusion.IsoHunter/scripts/convert_fusion_results_to_cff.py \\
+/hpf/largeprojects/ccmbio/MetaFusion_clinical/MetaFusion-Clinical/scripts/convert_fusion_results_to_cff.py \\
   --sample {sample} \\
   --sample_info_file {sample_info_file} \\
   --tool {tool} \\

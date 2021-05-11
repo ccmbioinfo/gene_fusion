@@ -435,7 +435,7 @@ class RnaFusion(Illumina):
                           module_entries=[("run_cicero", "module_rnapeg")],
                           name="RNApeg",
                           command="""mv {idx_file} {new_idx_file} && \\
-                          RNApeg -b {bamfile} -f {ref} -r {reflat} -o {outpath}""".format(
+RNApeg -b {bamfile} -f {ref} -r {reflat} -o {outpath}""".format(
                                   bamfile=os.path.join(self._output_dir, align_dir,
                                                        "Aligned.sortedByCoord.dedup.bam"),
                                   ref=config.param("run_cicero", "reference", required=True),
@@ -454,7 +454,7 @@ class RnaFusion(Illumina):
                          output_files=[os.path.join(align_dir, "".join([sample.name, ".ciceros.cff"]))],
                          module_entries=[("run_cicero", "module_cicero")],
                          name="run_cicero" + sample.name,
-                         command="""singularity exec --cleanenv -B /hpf:/hpf \\$CICERO_PATH/CICERO_1.4.2.sif \\
+                         command="""singularity exec --cleanenv -B /hpf:/hpf $CICERO_PATH/CICERO_1.4.2.sif \\
     Cicero.sh -n {threads} -b {bamfile} -g {genome} -r {reference} -j {junction}""".format(
                                  threads=config.param("run_cicero", "threads", required=True),
                                  bamfile=os.path.join(self._output_dir, align_dir,
