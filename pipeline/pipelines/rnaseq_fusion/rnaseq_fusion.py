@@ -408,9 +408,11 @@ class RnaFusion(Illumina):
 
             # Jobs
             # Trim
-            trim = trimmomatic.trimmomatic(fq1, fq2, fq1_trimmed, fq2_trimmed,
+            trim = trimmomatic.trimmomatic(fq1, fq2,
+                                           fq1_trimmed,
                                            os.path.join(self._output_dir, trim_dir,
-                                                        "".join([sample.name, ".trimmed.R2.fq.gz"])),
+                                                        "".join([sample.name, ".filtered.R1.fq.gz"])),
+                                           fq2_trimmed,
                                            os.path.join(self._output_dir, trim_dir,
                                                         "".join([sample.name, ".filtered.R2.fq.gz"])),
                                            None, None, config.param("trimmomatic", "adapter_fasta"),
@@ -658,11 +660,12 @@ RNApeg -b {bamfile} -f {ref} -r {reflat} -o {outpath}""".format(
             fusionmap_result = os.path.join("fusions", "fusionmap", sample.name, "02_RNA.FusionReport.txt")
             ericscript_result = os.path.join("fusions", "ericscript", sample.name, "fusion.results.filtered.tsv")
             integrate_result = os.path.join("fusions", "integrate", sample.name, "breakpoints.cov.tsv")
+            cicero_result = ""
             # Build tool_results list based on self.tool_list
             result_file_dict = {"star_seqr":   star_seqr_result, "arriba": arriba_result,
                                 "star_fusion": star_fusion_result, "defuse": defuse_result,
                                 "fusionmap":   fusionmap_result, "ericscript": ericscript_result,
-                                "integrate":   integrate_result
+                                "integrate":   integrate_result, "cicero": cicero_result
                                 }
             tool_results = [(key, result_file_dict[key]) for key in result_file_dict.keys() if key in self.tool_list]
             # tool_results = [("star_seqr",star_seqr_result), ("arriba", arriba_result),
