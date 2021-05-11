@@ -393,13 +393,22 @@ class RnaFusion(Illumina):
             else:
                 raise Exception("Error: only .bam and .fastq.gz inputs allowed")
 
-            # Trim
+            # Directories
             trim_dir = os.path.join("fusions", "trimmomatic", sample.name)
-            trim = trimmomatic.trimmomatic(fq1, fq2,
-                                           os.path.join(self._output_dir, trim_dir,
-                                                        "".join([sample.name, ".trimmed.R1.fq.gz"])),
-                                           os.path.join(self._output_dir, trim_dir,
-                                                        "".join([sample.name, ".filtered.R1.fq.gz"])),
+            align_dir = os.path.join("fusions", "star", sample.name)
+            cicero_dir = os.path.join("fusions", "cicero", sample.name)
+
+            # Files
+            fq1_trimmed = os.path.join(self._output_dir, trim_dir, "".join([sample.name, ".trimmed.R1.fq.gz"]))
+            fq2_trimmed = os.path.join(self._output_dir, trim_dir, "".join([sample.name, ".trimmed.R2.fq.gz"]))
+            star_bam = os.path.join(self._output_dir, align_dir, "Aligned.sortedByCoord.out.bam")
+            dedup_bam = os.path.join(self._output_dir, align_dir, "Aligned.sortedByCoord.dedup.bam")
+            junction_file = os.path.join(self._output_dir, cicero_dir,
+                                         "Aligned.sortedByCoord.dedup.bam.junctions.tab.shifted.tab")
+
+            # Jobs
+            # Trim
+            trim = trimmomatic.trimmomatic(fq1, fq2, fq1_trimmed, fq2_trimmed,
                                            os.path.join(self._output_dir, trim_dir,
                                                         "".join([sample.name, ".trimmed.R2.fq.gz"])),
                                            os.path.join(self._output_dir, trim_dir,
@@ -408,61 +417,41 @@ class RnaFusion(Illumina):
                                            os.path.join(self._output_dir, trim_dir,
                                                         "".join([sample.name, ".trim.log"])))
             # Align
-            align_dir = os.path.join("fusions", "star", sample.name)
-            align = star.align(os.path.join(self._output_dir, trim_dir,
-                                            "".join([sample.name, ".trimmed.R1.fq.gz"])),
-                               os.path.join(self._output_dir, trim_dir,
-                                            "".join([sample.name, ".trimmed.R2.fq.gz"])),
+            align = star.align(fq1_trimmed, fq2_trimmed,
                                os.path.join(self._output_dir, align_dir),
                                config.param("run_arriba", "genome_build"),
                                rg_id=sample.name, rg_library=sample.name, rg_sample=sample.name, rg_platform="ILLUMINA",
                                sort_bam=True)
-            index = samtools.index(os.path.join(self._output_dir, align_dir,
-                                                "Aligned.sortedByCoord.out.bam"))
+            index = samtools.index(star_bam)
             # Dedup and reindex
-            dedup = picard.mark_duplicates([os.path.join(self._output_dir, align_dir,
-                                                        "Aligned.sortedByCoord.out.bam")],
-                                           os.path.join(self._output_dir, align_dir,
-                                                        "Aligned.sortedByCoord.dedup.bam"),
+            dedup = picard.mark_duplicates([star_bam], dedup_bam,
                                            os.path.join(self._output_dir, align_dir,
                                                         "Aligned.sortedByCoord.dedup.metrics"))
             # RNApeg
-            cicero_dir = os.path.join("fusions", "cicero", sample.name)
-            rna_peg = Job(input_files=[os.path.join(self._output_dir, align_dir,
-                                                    "Aligned.sortedByCoord.dedup.bam")],
-                          output_files=[os.path.join(self._output_dir, cicero_dir,
-                                                     "Aligned.junctions.tab.shifted.tab")],
+            rna_peg = Job(input_files=[dedup_bam],
+                          output_files=[junction_file],
                           module_entries=[("run_cicero", "module_rnapeg")],
                           name="RNApeg",
                           command="""mv {idx_file} {new_idx_file} && \\
 RNApeg -b {bamfile} -f {ref} -r {reflat} -o {outpath}""".format(
-                                  bamfile=os.path.join(self._output_dir, align_dir,
-                                                       "Aligned.sortedByCoord.dedup.bam"),
+                                  bamfile=dedup_bam,
                                   ref=config.param("run_cicero", "reference", required=True),
                                   reflat=config.param("run_cicero", "reflat", required=True),
                                   outpath=os.path.join(self._output_dir, cicero_dir),
-                                  idx_file=re.sub(r"\.bam", ".bai",
-                                                  os.path.join(self._output_dir, align_dir,
-                                                               "Aligned.sortedByCoord.dedup.bam")),
-                                  new_idx_file=os.path.join(self._output_dir, align_dir,
-                                                               "Aligned.sortedByCoord.dedup.bam")+".bai"))
+                                  idx_file=re.sub(r"\.bam", ".bai", dedup_bam),
+                                  new_idx_file=dedup_bam+".bai"))
             # Cicero
-            cicero = Job(input_files=[os.path.join(self._output_dir, align_dir,
-                                                   "Aligned.sortedByCoord.dedup.bam"),
-                                      os.path.join(self._output_dir, cicero_dir,
-                                                   "Aligned.junctions.tab.shifted.tab")],
+            cicero = Job(input_files=[dedup_bam, junction_file],
                          output_files=[os.path.join(align_dir, "".join([sample.name, ".ciceros.cff"]))],
                          module_entries=[("run_cicero", "module_cicero")],
                          name="run_cicero" + sample.name,
                          command="""singularity exec --cleanenv -B /hpf:/hpf $CICERO_PATH/CICERO_1.4.2.sif \\
     Cicero.sh -n {threads} -b {bamfile} -g {genome} -r {reference} -j {junction}""".format(
                                  threads=config.param("run_cicero", "threads", required=True),
-                                 bamfile=os.path.join(self._output_dir, align_dir,
-                                                      "Aligned.sortedByCoord.dedup.bam"),
+                                 bamfile=dedup_bam,
                                  genome=config.param("run_cicero", "genome", required=True),
                                  reference=config.param("run_cicero", "cicero_data", required=True),
-                                 junction=os.path.join(self._output_dir, cicero_dir,
-                                                       "Aligned.junctions.tab.shifted.tab")))
+                                 junction=junction_file))
 
             job_mkdir = Job(command="mkdir -p {trim} {align} {cicero}".format(
                     trim=trim_dir, align=align_dir, cicero=cicero_dir))
