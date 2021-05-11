@@ -395,7 +395,6 @@ class RnaFusion(Illumina):
 
             # Trim
             trim_dir = os.path.join("fusions", "trimmomatic", sample.name)
-            os.makedirs(trim_dir)
             trim = trimmomatic.trimmomatic(fq1, fq2,
                                            os.path.join(self._output_dir, trim_dir,
                                                         "".join([sample.name, ".trimmed.R1.fq.gz"])),
@@ -410,7 +409,6 @@ class RnaFusion(Illumina):
                                                         "".join([sample.name, ".trim.log"])))
             # Align
             align_dir = os.path.join("fusions", "star", sample.name)
-            os.makedirs(align_dir)
             align = star.align(os.path.join(self._output_dir, trim_dir,
                                             "".join([sample.name, ".trimmed.R1.fq.gz"])),
                                os.path.join(self._output_dir, trim_dir,
@@ -430,7 +428,6 @@ class RnaFusion(Illumina):
                                                         "Aligned.sortedByCoord.dedup.metrics"))
             # RNApeg
             cicero_dir = os.path.join("fusions", "cicero", sample.name)
-            os.makedirs(cicero_dir)
             rna_peg = Job(input_files=[os.path.join(self._output_dir, align_dir,
                                                     "Aligned.sortedByCoord.dedup.bam")],
                           output_files=[os.path.join(self._output_dir, cicero_dir,
@@ -460,7 +457,10 @@ class RnaFusion(Illumina):
                                  reference=config.param("run_cicero", "cicero_data", required=True),
                                  junction=os.path.join(self._output_dir, cicero_dir,
                                                        "Aligned.junctions.tab.shifted.tab")))
-            jobs.append(concat_jobs([trim, align, index, dedup, rna_peg, cicero], name="cicero"))
+
+            job_mkdir = Job(command="mkdir -p {trim} {align} {cicero}".format(
+                    trim=trim_dir, align=align_dir, cicero=cicero_dir))
+            jobs.append(concat_jobs([job_mkdir, trim, align, index, dedup, rna_peg, cicero], name="cicero"))
         return jobs
 
     def run_star_seqr(self):
