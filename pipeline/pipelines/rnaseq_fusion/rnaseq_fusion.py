@@ -413,7 +413,7 @@ class RnaFusion(Illumina):
                                             "".join([sample.name, ".trimmed.R1.fq.gz"])),
                                os.path.join(self._output_dir, trim_dir,
                                             "".join([sample.name, ".trimmed.R2.fq.gz"])),
-                               align_dir,
+                               os.path.join(self._output_dir, align_dir),
                                config.param("run_arriba", "genome_build"),
                                rg_id=sample.name, rg_library=sample.name, rg_sample=sample.name, rg_platform="ILLUMINA",
                                sort_bam=True)
