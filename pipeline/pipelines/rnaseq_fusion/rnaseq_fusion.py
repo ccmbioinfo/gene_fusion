@@ -420,8 +420,8 @@ class RnaFusion(Illumina):
             index = samtools.index(os.path.join(self._output_dir, align_dir,
                                                 "Aligned.sortedByCoord.out.bam"))
             # Dedup and reindex
-            dedup = picard.mark_duplicates(os.path.join(self._output_dir, align_dir,
-                                                        "Aligned.sortedByCoord.out.bam"),
+            dedup = picard.mark_duplicates([os.path.join(self._output_dir, align_dir,
+                                                        "Aligned.sortedByCoord.out.bam")],
                                            os.path.join(self._output_dir, align_dir,
                                                         "Aligned.sortedByCoord.dedup.bam"),
                                            os.path.join(self._output_dir, align_dir,
@@ -447,7 +447,7 @@ class RnaFusion(Illumina):
                                                    "Aligned.junctions.tab.shifted.tab")],
                          output_files=[],
                          module_entries=[("run_cicero", "module_cicero")],
-                         name="",
+                         name="cicero_run",
                          command="""singularity exec --cleanenv -B /hpf:/hpf \\$CICERO_PATH/CICERO_1.4.2.sif \\
     Cicero.sh -n {threads} -b {bamfile} -g {genome} -r {reference} -j {junction}""".format(
                                  threads=config.param("run_cicero", "threads", required=True),
