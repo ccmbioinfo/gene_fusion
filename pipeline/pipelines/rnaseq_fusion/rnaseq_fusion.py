@@ -448,12 +448,13 @@ RNApeg -b {bamfile} -f {ref} -r {reflat} -o {outpath}""".format(
                          module_entries=[("run_cicero", "module_cicero")],
                          name="run_cicero" + sample.name,
                          command="""singularity exec --cleanenv -B /hpf:/hpf $CICERO_PATH/CICERO_1.4.2.sif \\
-    Cicero.sh -n {threads} -b {bamfile} -g {genome} -r {reference} -j {junction}""".format(
+    Cicero.sh -n {threads} -b {bamfile} -g {genome} -r {reference} -j {junction} -o {out_dir}""".format(
                                  threads=config.param("run_cicero", "threads", required=True),
                                  bamfile=dedup_bam,
                                  genome=config.param("run_cicero", "genome", required=True),
                                  reference=config.param("run_cicero", "cicero_data", required=True),
-                                 junction=junction_file))
+                                 junction=junction_file,
+                                 out_dir=os.path.join(self._output_dir, cicero_dir)))
 
             job_mkdir = Job(command="mkdir -p {trim} {align} {cicero}".format(
                     trim=trim_dir, align=align_dir, cicero=cicero_dir))
