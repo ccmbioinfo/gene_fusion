@@ -445,7 +445,7 @@ RNApeg -b {new_bamfile} -f {ref} -r {reflat} -o {outpath}""".format(
                                   new_idx_file=symlink_bam+".bai"))
             # Cicero
             cicero = Job(input_files=[dedup_bam, junction_file],
-                         output_files=[os.path.join(align_dir, "".join([sample.name, ".ciceros.cff"]))],
+                         output_files=[os.path.join(cicero_dir, "CICERO_DATADIR", sample.name, "final_fusions.txt")],
                          module_entries=[("run_cicero", "module_cicero")],
                          name="run_cicero" + sample.name,
                          command="""singularity exec --cleanenv -B /hpf:/hpf $CICERO_PATH/CICERO_1.4.2.sif \\
@@ -662,7 +662,8 @@ RNApeg -b {new_bamfile} -f {ref} -r {reflat} -o {outpath}""".format(
             fusionmap_result = os.path.join("fusions", "fusionmap", sample.name, "02_RNA.FusionReport.txt")
             ericscript_result = os.path.join("fusions", "ericscript", sample.name, "fusion.results.filtered.tsv")
             integrate_result = os.path.join("fusions", "integrate", sample.name, "breakpoints.cov.tsv")
-            cicero_result = ""
+            cicero_result = os.path.join("fusions", "cicero", sample.name, "CICERO_DATADIR", sample.name,
+                                         "final_fusions.txt")
             # Build tool_results list based on self.tool_list
             result_file_dict = {"star_seqr":   star_seqr_result, "arriba": arriba_result,
                                 "star_fusion": star_fusion_result, "defuse": defuse_result,
