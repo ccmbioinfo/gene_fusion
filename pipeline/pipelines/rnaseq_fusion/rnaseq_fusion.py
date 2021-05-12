@@ -403,8 +403,8 @@ class RnaFusion(Illumina):
             fq2_trimmed = os.path.join(self._output_dir, trim_dir, "".join([sample.name, ".trimmed.R2.fq.gz"]))
             star_bam = os.path.join(self._output_dir, align_dir, "Aligned.sortedByCoord.out.bam")
             dedup_bam = os.path.join(self._output_dir, align_dir, "Aligned.sortedByCoord.dedup.bam")
-            junction_file = os.path.join(self._output_dir, cicero_dir,
-                                         "Aligned.sortedByCoord.dedup.bam.junctions.tab.shifted.tab")
+            symlink_bam = os.path.join(self._output_dir, cicero_dir, sample.name+".bam")
+            junction_file = symlink_bam + ".junctions.tab.shifted.tab"
 
             # Jobs
             # Trim
@@ -434,14 +434,15 @@ class RnaFusion(Illumina):
                           output_files=[junction_file],
                           module_entries=[("run_cicero", "module_rnapeg")],
                           name="RNApeg",
-                          command="""mv {idx_file} {new_idx_file} && \\
-RNApeg -b {bamfile} -f {ref} -r {reflat} -o {outpath}""".format(
+                          command="""ln -s {idx_file} {new_idx_file} &&  ln -s {bamfile} {new_bamfile} && \\
+RNApeg -b {new_bamfile} -f {ref} -r {reflat} -o {outpath}""".format(
                                   bamfile=dedup_bam,
                                   ref=config.param("run_cicero", "reference", required=True),
                                   reflat=config.param("run_cicero", "reflat", required=True),
                                   outpath=os.path.join(self._output_dir, cicero_dir),
-                                  idx_file=re.sub(r"\.bam", ".bai", dedup_bam),
-                                  new_idx_file=dedup_bam+".bai"))
+                                  idx_file=re.sub(r"\.bam$", ".bai", dedup_bam),
+                                  new_bamfile=symlink_bam,
+                                  new_idx_file=symlink_bam+".bai"))
             # Cicero
             cicero = Job(input_files=[dedup_bam, junction_file],
                          output_files=[os.path.join(align_dir, "".join([sample.name, ".ciceros.cff"]))],
@@ -450,7 +451,7 @@ RNApeg -b {bamfile} -f {ref} -r {reflat} -o {outpath}""".format(
                          command="""singularity exec --cleanenv -B /hpf:/hpf $CICERO_PATH/CICERO_1.4.2.sif \\
     Cicero.sh -n {threads} -b {bamfile} -g {genome} -r {reference} -j {junction} -o {out_dir}""".format(
                                  threads=config.param("run_cicero", "threads", required=True),
-                                 bamfile=dedup_bam,
+                                 bamfile=symlink_bam,
                                  genome=config.param("run_cicero", "genome", required=True),
                                  reference=config.param("run_cicero", "cicero_data", required=True),
                                  junction=junction_file,
