@@ -50,6 +50,11 @@ def trimmomatic(
         outputs = [single_output]
 
     headcrop_length = config.param('trimmomatic', 'headcrop_length', required=False, type='posint')
+    if not adapter_file:
+        adapter_settings = ""
+    else:
+        adapter_settings = "ILLUMINACLIP:" + adapter_file + config.param('trimmomatic', 'illumina_clip_settings')
+
 
     return Job(
         inputs,
@@ -67,7 +72,7 @@ java -XX:ParallelGCThreads=1 -Xmx{ram} -jar $TRIMMOMATIC_JAR {mode} \\
   -phred{quality_offset} \\
   {inputs} \\
   {outputs} \\
-  ILLUMINACLIP:{adapter_file}{illumina_clip_settings}{headcrop_length} \\
+  {adapter_settings}{headcrop_length} \\
   TRAILING:{trailing_min_quality} \\
   MINLEN:{min_length}{tophred33} \\
   2> {trim_log}""".format(
@@ -77,8 +82,7 @@ java -XX:ParallelGCThreads=1 -Xmx{ram} -jar $TRIMMOMATIC_JAR {mode} \\
         quality_offset=quality_offset if quality_offset == 64 else "33",
         inputs=" \\\n  ".join(inputs),
         outputs=" \\\n  ".join(outputs),
-        adapter_file=adapter_file,
-        illumina_clip_settings=config.param('trimmomatic', 'illumina_clip_settings'),
+        adapter_settings=adapter_settings,
         headcrop_length=" \\\n  HEADCROP:" + str(headcrop_length) if headcrop_length else "",
         trailing_min_quality=config.param('trimmomatic', 'trailing_min_quality', type='int'),
         min_length=config.param('trimmomatic', 'min_length', type='posint'),

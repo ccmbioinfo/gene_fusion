@@ -434,8 +434,9 @@ class RnaFusion(Illumina):
                           output_files=[junction_file],
                           module_entries=[("run_cicero", "module_rnapeg")],
                           name="RNApeg",
-                          command="""ln -s {idx_file} {new_idx_file} &&  ln -s {bamfile} {new_bamfile} && \\
-RNApeg -b {new_bamfile} -f {ref} -r {reflat} -o {outpath}""".format(
+                          command="""ln -s \\\n{idx_file} \\\n{new_idx_file} && \\ 
+ln -s {bamfile} \\\n{new_bamfile} && \\
+RNApeg -b {new_bamfile} \\\n   -f {ref} \\\n   -r {reflat} \\\n   -o {outpath}""".format(
                                   bamfile=dedup_bam,
                                   ref=config.param("run_cicero", "reference", required=True),
                                   reflat=config.param("run_cicero", "reflat", required=True),
@@ -449,7 +450,7 @@ RNApeg -b {new_bamfile} -f {ref} -r {reflat} -o {outpath}""".format(
                          module_entries=[("run_cicero", "module_cicero")],
                          name="run_cicero" + sample.name,
                          command="""singularity exec --cleanenv -B /hpf:/hpf $CICERO_PATH/CICERO_1.4.2.sif \\
-    Cicero.sh -n {threads} -b {bamfile} -g {genome} -r {reference} -j {junction} -o {out_dir}""".format(
+Cicero.sh -n {threads} -b {bamfile} \\\n -g {genome} \\\n -r {reference} \\\n  -j {junction} -o {out_dir}""".format(
                                  threads=config.param("run_cicero", "threads", required=True),
                                  bamfile=symlink_bam,
                                  genome=config.param("run_cicero", "genome", required=True),
