@@ -415,7 +415,7 @@ class RnaFusion(Illumina):
                                            fq2_trimmed,
                                            os.path.join(self._output_dir, trim_dir,
                                                         "".join([sample.name, ".filtered.R2.fq.gz"])),
-                                           None, None, config.param("trimmomatic", "adapter_fasta"),
+                                           None, None, config.param("trimmomatic", "adapter_fasta", required=False),
                                            os.path.join(self._output_dir, trim_dir,
                                                         "".join([sample.name, ".trim.log"])))
             # Align
