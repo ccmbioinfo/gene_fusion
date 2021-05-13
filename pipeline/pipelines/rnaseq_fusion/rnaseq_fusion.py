@@ -421,7 +421,7 @@ class RnaFusion(Illumina):
             # Align
             align = star.align(fq1_trimmed, fq2_trimmed,
                                os.path.join(self._output_dir, align_dir),
-                               config.param("run_arriba", "genome_build"),
+                               config.param("run_cicero", "genome_build"),
                                rg_id=sample.name, rg_library=sample.name, rg_sample=sample.name, rg_platform="ILLUMINA",
                                sort_bam=True)
             index = samtools.index(star_bam)
