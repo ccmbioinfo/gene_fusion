@@ -678,8 +678,7 @@ Cicero.sh -n {threads} -b {bamfile} \\\n -g {genome} \\\n -r {reference} \\\n  -
             fusionmap_result = os.path.join("fusions", "fusionmap", sample.name, "02_RNA.FusionReport.txt")
             ericscript_result = os.path.join("fusions", "ericscript", sample.name, "fusion.results.filtered.tsv")
             integrate_result = os.path.join("fusions", "integrate", sample.name, "breakpoints.cov.tsv")
-            cicero_result = os.path.join("fusions", "cicero", sample.name, "CICERO_DATADIR", sample.name,
-                                         "final_fusions.txt")
+            cicero_result = os.path.join("fusions", "cicero", sample.name, "final_fusions.txt")
             # Build tool_results list based on self.tool_list
             result_file_dict = {"star_seqr":   star_seqr_result, "arriba": arriba_result,
                                 "star_fusion": star_fusion_result, "defuse": defuse_result,
