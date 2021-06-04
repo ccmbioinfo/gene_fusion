@@ -458,7 +458,7 @@ Cicero.sh -n {threads} -b {bamfile} \\\n -g {genome} \\\n -r {reference} \\\n  -
                                  junction=junction_file,
                                  out_dir=os.path.join(self._output_dir, cicero_dir)))
             save_out = Job(input_files=[os.path.join(cicero_dir, "CICERO_DATADIR", sample.name, "final_fusions.txt")],
-                           output_files=[os.path.join(output_dir, "cicero", sample.name, "final_fusions.txt")],
+                           output_files=[os.path.join(output_dir, "final_fusions.txt")],
                            name="save_cicero_results" + sample.name,
                            command="""mv {files_to_keep} {target_dir}""".format(
                                    files_to_keep=" ".join([
