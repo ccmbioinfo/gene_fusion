@@ -394,9 +394,11 @@ class RnaFusion(Illumina):
                 raise Exception("Error: only .bam and .fastq.gz inputs allowed")
 
             # Directories
-            trim_dir = os.path.join("fusions", "trimmomatic", sample.name)
-            align_dir = os.path.join("fusions", "star", sample.name)
-            cicero_dir = os.path.join("fusions", "cicero", sample.name)
+            tmp_dir = os.path.join("/localhd/${PBS_JOBID}")  # The variable should be unevaluated in the qsub script
+            trim_dir = os.path.join(tmp_dir, "trimmomatic")
+            align_dir = os.path.join(tmp_dir, "star")
+            cicero_dir = os.path.join(tmp_dir, "cicero")
+            output_dir = os.path.join("fusions", "cicero", sample.name)
 
             # Files
             fq1_trimmed = os.path.join(self._output_dir, trim_dir, "".join([sample.name, ".trimmed.R1.fq.gz"]))
@@ -407,7 +409,6 @@ class RnaFusion(Illumina):
             junction_file = symlink_bam + ".junctions.tab.shifted.tab"
 
             # Jobs
-            # Trim
             trim = trimmomatic.trimmomatic(fq1, fq2,
                                            fq1_trimmed,
                                            os.path.join(self._output_dir, trim_dir,
@@ -418,14 +419,13 @@ class RnaFusion(Illumina):
                                            None, None, config.param("trimmomatic", "adapter_fasta", required=False),
                                            os.path.join(self._output_dir, trim_dir,
                                                         "".join([sample.name, ".trim.log"])))
-            # Align
             align = star.align(fq1_trimmed, fq2_trimmed,
                                os.path.join(self._output_dir, align_dir),
                                config.param("run_cicero", "genome_build"),
                                rg_id=sample.name, rg_library=sample.name, rg_sample=sample.name, rg_platform="ILLUMINA",
                                sort_bam=True)
             index = samtools.index(star_bam)
-            # Dedup and reindex
+            # Also indexes for us! idx_file=re.sub(r"\.bam$", ".bai", dedup_bam)
             dedup = picard.mark_duplicates([star_bam], dedup_bam,
                                            os.path.join(self._output_dir, align_dir,
                                                         "Aligned.sortedByCoord.dedup.metrics"))
@@ -457,11 +457,26 @@ Cicero.sh -n {threads} -b {bamfile} \\\n -g {genome} \\\n -r {reference} \\\n  -
                                  reference=config.param("run_cicero", "cicero_data", required=True),
                                  junction=junction_file,
                                  out_dir=os.path.join(self._output_dir, cicero_dir)))
+            save_out = Job(input_files=[os.path.join(cicero_dir, "CICERO_DATADIR", sample.name, "final_fusions.txt")],
+                           output_files=[os.path.join(output_dir, "cicero", sample.name, "final_fusions.txt")],
+                           name="save_cicero_results" + sample.name,
+                           command="""mv {files_to_keep} {target_dir}""".format(
+                                   files_to_keep=" ".join([
+                                       junction_file,
+                                       os.path.join(cicero_dir, "0*.{err,log}"),  # Logs
+                                       os.path.join(cicero_dir, "CICERO_DATADIR", sample.name, "[^St]*")  # Result files
+                                       ]),
+                                   target_dir=output_dir
+                                   ))  # the files in /localhd/ should be removed automatically upon job end
 
             job_mkdir = Job(command="mkdir -p {trim} {align} {cicero}".format(
                     trim=trim_dir, align=align_dir, cicero=cicero_dir))
-            jobs.append(concat_jobs([job_mkdir, trim, align, index, dedup, rna_peg, cicero],
-                                    name="run_cicero." + sample.name))
+            combined_job = concat_jobs([job_mkdir, trim, align, index, dedup, rna_peg, cicero, save_out],
+                                        name="run_cicero." + sample.name)
+            # Replace input and output specification
+            combined_job._output_files = [os.path.join(output_dir, "cicero", sample.name, "final_fusions.txt")]
+            combined_job.input_files = [fq1, fq2]
+            jobs.append(combined_job)
         return jobs
 
     def run_star_seqr(self):
