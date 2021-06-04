@@ -474,7 +474,7 @@ Cicero.sh -n {threads} -b {bamfile} \\\n -g {genome} \\\n -r {reference} \\\n  -
             combined_job = concat_jobs([job_mkdir, trim, align, index, dedup, rna_peg, cicero, save_out],
                                         name="run_cicero." + sample.name)
             # Replace input and output specification
-            combined_job._output_files = [os.path.join(output_dir, "cicero", sample.name, "final_fusions.txt")]
+            combined_job._output_files = [os.path.join(output_dir, "final_fusions.txt")]
             combined_job.input_files = [fq1, fq2]
             jobs.append(combined_job)
         return jobs
