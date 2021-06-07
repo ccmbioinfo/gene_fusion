@@ -394,7 +394,7 @@ class RnaFusion(Illumina):
                 raise Exception("Error: only .bam and .fastq.gz inputs allowed")
 
             # Directories
-            tmp_dir = os.path.join("/localhd/\\${PBS_JOBID}")  # The variable should be unevaluated in the qsub script
+            tmp_dir = os.path.join("/localhd/${PBS_JOBID}")  # The variable should be unevaluated in the qsub script
             trim_dir = os.path.join(tmp_dir, "trimmomatic")
             align_dir = os.path.join(tmp_dir, "star")
             cicero_dir = os.path.join(tmp_dir, "cicero")
