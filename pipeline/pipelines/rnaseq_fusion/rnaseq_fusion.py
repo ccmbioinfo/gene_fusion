@@ -394,7 +394,7 @@ class RnaFusion(Illumina):
                 raise Exception("Error: only .bam and .fastq.gz inputs allowed")
 
             # Directories
-            tmp_dir = os.path.join("tmps/${PBS_JOBID}")  # The variable should be unevaluated in the qsub script
+            tmp_dir = "/localhd/${PBS_JOBID}"  # The variable should be unevaluated in the qsub script
             trim_dir = os.path.join(tmp_dir, "trimmomatic")
             align_dir = os.path.join(tmp_dir, "star")
             cicero_dir = os.path.join(tmp_dir, "cicero")
@@ -403,22 +403,21 @@ class RnaFusion(Illumina):
             # Files
             fq1_trimmed = os.path.join(self._output_dir, trim_dir, "".join([sample.name, ".trimmed.R1.fq.gz"]))
             fq2_trimmed = os.path.join(self._output_dir, trim_dir, "".join([sample.name, ".trimmed.R2.fq.gz"]))
+            fq1_dropped = os.path.join(self._output_dir, trim_dir, "".join([sample.name, ".filtered.R1.fq.gz"]))
+            fq2_dropped = os.path.join(self._output_dir, trim_dir, "".join([sample.name, ".filtered.R2.fq.gz"]))
+            trim_log = os.path.join(self._output_dir, trim_dir, "".join([sample.name, ".trim.log"]))
             star_bam = os.path.join(self._output_dir, align_dir, "Aligned.sortedByCoord.out.bam")
             dedup_bam = os.path.join(self._output_dir, align_dir, "Aligned.sortedByCoord.dedup.bam")
+            dedup_metrics = os.path.join(self._output_dir, align_dir, "Aligned.sortedByCoord.dedup.metrics")
             symlink_bam = os.path.join(self._output_dir, cicero_dir, sample.name+".bam")
             junction_file = symlink_bam + ".junctions.tab.shifted.tab"
 
             # Jobs
             trim = trimmomatic.trimmomatic(fq1, fq2,
-                                           fq1_trimmed,
-                                           os.path.join(self._output_dir, trim_dir,
-                                                        "".join([sample.name, ".filtered.R1.fq.gz"])),
-                                           fq2_trimmed,
-                                           os.path.join(self._output_dir, trim_dir,
-                                                        "".join([sample.name, ".filtered.R2.fq.gz"])),
+                                           fq1_trimmed, fq1_dropped,
+                                           fq2_trimmed, fq2_dropped,
                                            None, None, config.param("trimmomatic", "adapter_fasta", required=False),
-                                           os.path.join(self._output_dir, trim_dir,
-                                                        "".join([sample.name, ".trim.log"])))
+                                           trim_log)
             align = star.align(fq1_trimmed, fq2_trimmed,
                                os.path.join(self._output_dir, align_dir),
                                config.param("run_cicero", "genome_build"),
@@ -426,15 +425,13 @@ class RnaFusion(Illumina):
                                sort_bam=True)
             index = samtools.index(star_bam)
             # Also indexes for us! idx_file=re.sub(r"\.bam$", ".bai", dedup_bam)
-            dedup = picard.mark_duplicates([star_bam], dedup_bam,
-                                           os.path.join(self._output_dir, align_dir,
-                                                        "Aligned.sortedByCoord.dedup.metrics"))
+            dedup = picard.mark_duplicates([star_bam], dedup_bam, dedup_metrics)
             # RNApeg
             rna_peg = Job(input_files=[dedup_bam],
                           output_files=[junction_file],
                           module_entries=[("run_cicero", "module_rnapeg")],
                           name="RNApeg",
-                          command="""ln -s \\\n{idx_file} \\\n{new_idx_file} && \\ 
+                          command="""ln -s \\\n{idx_file} \\\n{new_idx_file} && \\
 ln -s {bamfile} \\\n{new_bamfile} && \\
 RNApeg -b {new_bamfile} \\\n   -f {ref} \\\n   -r {reflat} \\\n   -o {outpath}""".format(
                                   bamfile=dedup_bam,
