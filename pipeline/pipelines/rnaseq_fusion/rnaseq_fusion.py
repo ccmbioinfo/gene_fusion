@@ -434,7 +434,7 @@ class RnaFusion(Illumina):
                           command="""ln -s \\\n{idx_file} \\\n{new_idx_file} && \\
 ln -s {bamfile} \\\n{new_bamfile} && \\
 singularity exec --cleanenv -B /hpf:/hpf -B /localhd:/localhd -B {outpath}:/results \\
-$(which rnapeg.sif) RNApeg.sh -b {new_bamfile} \\\n   -f {ref} \\\n   -r {reflat} \\\n   -o {outpath}""".format(
+$(which rnapeg.sif) RNApeg.sh -b {new_bamfile} \\\n   -f {ref} \\\n   -r {reflat}""".format(
                                   bamfile=dedup_bam,
                                   ref=config.param("run_cicero", "reference", required=True),
                                   reflat=config.param("run_cicero", "reflat", required=True),
