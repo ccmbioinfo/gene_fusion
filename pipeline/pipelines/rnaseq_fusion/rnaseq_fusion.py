@@ -447,7 +447,8 @@ RNApeg -b {new_bamfile_singularity_mapped} \\\n   -f {ref} \\\n   -r {reflat} \\
                          output_files=[os.path.join(cicero_dir, "CICERO_DATADIR", sample.name, "final_fusions.txt")],
                          module_entries=[("run_cicero", "module_cicero")],
                          name="run_cicero" + sample.name,
-                         command="""singularity exec --cleanenv -B /hpf:/hpf $CICERO_PATH/CICERO_1.4.2.sif \\
+                         command="""singularity exec --cleanenv -B /hpf:/hpf -B /localhd:/localhd \\
+                         $CICERO_PATH/CICERO_1.4.2.sif \\
 Cicero.sh -n {threads} -b {bamfile} \\\n -g {genome} \\\n -r {reference} \\\n  -j {junction} -o {out_dir}""".format(
                                  threads=config.param("run_cicero", "threads", required=True),
                                  bamfile=symlink_bam,
