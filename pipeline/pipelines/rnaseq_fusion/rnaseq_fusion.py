@@ -433,14 +433,15 @@ class RnaFusion(Illumina):
                           name="RNApeg",
                           command="""ln -s \\\n{idx_file} \\\n{new_idx_file} && \\
 ln -s {bamfile} \\\n{new_bamfile} && \\
-RNApeg -b {new_bamfile} \\\n   -f {ref} \\\n   -r {reflat} \\\n   -o {outpath}""".format(
+RNApeg -b {new_bamfile_singularity_mapped} \\\n   -f {ref} \\\n   -r {reflat} \\\n   -o {outpath}""".format(
                                   bamfile=dedup_bam,
                                   ref=config.param("run_cicero", "reference", required=True),
                                   reflat=config.param("run_cicero", "reflat", required=True),
                                   outpath=os.path.join(self._output_dir, cicero_dir),
                                   idx_file=re.sub(r"\.bam$", ".bai", dedup_bam),
                                   new_bamfile=symlink_bam,
-                                  new_idx_file=symlink_bam+".bai"))
+                                  new_idx_file=symlink_bam+".bai",
+                                  new_bamfile_singularity_mapped=os.path.join("/results", sample.name+".bam")))
             # Cicero
             cicero = Job(input_files=[dedup_bam, junction_file],
                          output_files=[os.path.join(cicero_dir, "CICERO_DATADIR", sample.name, "final_fusions.txt")],
