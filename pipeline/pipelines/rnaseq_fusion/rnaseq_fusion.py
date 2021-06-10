@@ -137,8 +137,9 @@ class RnaFusion(Illumina):
         self.argparser.add_argument("--database", required=False,
                                     help="specifies database path for historical fusions, FP list and clinical fusions")
         # Class variables
-        self.tool_list = ["star_seqr", "arriba", "star_fusion", "fusionmap", "ericscript", "integrate", "defuse",
-                          "cicero"]
+        # See in-line comment in merge_cff_fusion for reason to keep defuse tool last.
+        self.tool_list = ["star_seqr", "arriba", "star_fusion", "fusionmap", "ericscript", "integrate", "cicero",
+                          "defuse"]
         # self.tool_list = ["star_seqr", "arriba", "star_fusion", "fusionmap", "ericscript", "defuse"]
         # self.tool_list = ["arriba", "star_fusion", "fusionmap", "ericscript", "integrate", "defuse"]
         super(RnaFusion, self).__init__()
@@ -463,7 +464,8 @@ Cicero.sh -n {threads} -b {bamfile} \\\n -g {genome} \\\n -r {reference} \\\n  -
                                    files_to_keep=" ".join([
                                        junction_file,
                                        os.path.join(cicero_dir, "0*.{err,log}"),  # Logs
-                                       os.path.join(cicero_dir, "CICERO_DATADIR", sample.name, "[^St]*")  # Result files
+                                       os.path.join(cicero_dir, "CICERO_DATADIR", sample.name, "*.{txt,tab,html}")  #
+                                       # Result files
                                        ]),
                                    target_dir=output_dir
                                    ))  # the files in /localhd/ should be removed automatically upon job end
