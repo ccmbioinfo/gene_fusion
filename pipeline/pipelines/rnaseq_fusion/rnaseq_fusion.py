@@ -399,19 +399,20 @@ class RnaFusion(Illumina):
             trim_dir = os.path.join(tmp_dir, "trimmomatic")
             align_dir = os.path.join(tmp_dir, "star")
             cicero_dir = os.path.join(tmp_dir, "cicero")
+            rnapeg_dir = os.path.join(tmp_dir, "rnapeg")
             output_dir = os.path.join("fusions", "cicero", sample.name)
 
             # Files
-            fq1_trimmed = os.path.join(self._output_dir, trim_dir, "".join([sample.name, ".trimmed.R1.fq.gz"]))
-            fq2_trimmed = os.path.join(self._output_dir, trim_dir, "".join([sample.name, ".trimmed.R2.fq.gz"]))
-            fq1_dropped = os.path.join(self._output_dir, trim_dir, "".join([sample.name, ".filtered.R1.fq.gz"]))
-            fq2_dropped = os.path.join(self._output_dir, trim_dir, "".join([sample.name, ".filtered.R2.fq.gz"]))
-            trim_log = os.path.join(self._output_dir, trim_dir, "".join([sample.name, ".trim.log"]))
-            star_bam = os.path.join(self._output_dir, align_dir, "Aligned.sortedByCoord.out.bam")
-            dedup_bam = os.path.join(self._output_dir, align_dir, "Aligned.sortedByCoord.dedup.bam")
-            dedup_metrics = os.path.join(self._output_dir, align_dir, "Aligned.sortedByCoord.dedup.metrics")
-            symlink_bam = os.path.join(self._output_dir, cicero_dir, sample.name+".bam")
-            junction_file = symlink_bam + ".junctions.tab.shifted.tab"
+            fq1_trimmed = os.path.join(trim_dir, "".join([sample.name, ".trimmed.R1.fq.gz"]))
+            fq2_trimmed = os.path.join(trim_dir, "".join([sample.name, ".trimmed.R2.fq.gz"]))
+            fq1_dropped = os.path.join(trim_dir, "".join([sample.name, ".filtered.R1.fq.gz"]))
+            fq2_dropped = os.path.join(trim_dir, "".join([sample.name, ".filtered.R2.fq.gz"]))
+            trim_log = os.path.join(trim_dir, "".join([sample.name, ".trim.log"]))
+            star_bam = os.path.join(align_dir, "Aligned.sortedByCoord.out.bam")
+            dedup_bam = os.path.join(align_dir, "Aligned.sortedByCoord.dedup.bam")
+            dedup_metrics = os.path.join(align_dir, "Aligned.sortedByCoord.dedup.metrics")
+            symlink_bam = os.path.join(cicero_dir, sample.name+".bam")
+            junction_file = os.path.join(rnapeg_dir, sample.name + ".bam.junctions.tab.shifted.tab")
 
             # Jobs
             trim = trimmomatic.trimmomatic(fq1, fq2,
@@ -420,7 +421,7 @@ class RnaFusion(Illumina):
                                            None, None, config.param("trimmomatic", "adapter_fasta", required=False),
                                            trim_log)
             align = star.align(fq1_trimmed, fq2_trimmed,
-                               os.path.join(self._output_dir, align_dir),
+                               align_dir,
                                config.param("run_cicero", "genome_build"),
                                rg_id=sample.name, rg_library=sample.name, rg_sample=sample.name, rg_platform="ILLUMINA",
                                sort_bam=True)
@@ -439,7 +440,7 @@ $(which rnapeg.sif) RNApeg.sh -b {new_bamfile} \\\n   -f {ref} \\\n   -r {reflat
                                   bamfile=dedup_bam,
                                   ref=config.param("run_cicero", "reference", required=True),
                                   reflat=config.param("run_cicero", "reflat", required=True),
-                                  outpath=os.path.join(self._output_dir, cicero_dir),
+                                  outpath=rnapeg_dir,
                                   idx_file=re.sub(r"\.bam$", ".bai", dedup_bam),
                                   new_bamfile=symlink_bam,
                                   new_idx_file=symlink_bam+".bai"))
@@ -456,7 +457,7 @@ Cicero.sh -n {threads} -b {bamfile} \\\n -g {genome} \\\n -r {reference} \\\n  -
                                  genome=config.param("run_cicero", "genome", required=True),
                                  reference=config.param("run_cicero", "cicero_data", required=True),
                                  junction=junction_file,
-                                 out_dir=os.path.join(self._output_dir, cicero_dir)))
+                                 out_dir=cicero_dir))
             save_out = Job(input_files=[os.path.join(cicero_dir, "CICERO_DATADIR", sample.name, "final_fusions.txt")],
                            output_files=[os.path.join(output_dir, "final_fusions.txt")],
                            name="save_cicero_results" + sample.name,
