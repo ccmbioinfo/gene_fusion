@@ -471,8 +471,8 @@ Cicero.sh -n {threads} -b {bamfile} \\\n -g {genome} \\\n -r {reference} \\\n  -
                                    target_dir=output_dir
                                    ))  # the files in /localhd/ should be removed automatically upon job end
 
-            job_mkdir = Job(command="mkdir -p {trim} {align} {cicero} {output}".format(
-                    trim=trim_dir, align=align_dir, cicero=cicero_dir, output=output_dir))
+            job_mkdir = Job(command="mkdir -p {trim} {align} {cicero} {output} {rnapeg}".format(
+                    trim=trim_dir, align=align_dir, cicero=cicero_dir, output=output_dir, rnapeg=rnapeg_dir))
             combined_job = concat_jobs([job_mkdir, trim, align, index, dedup, rna_peg, cicero, save_out],
                                         name="run_cicero." + sample.name)
             # Replace input and output specification
