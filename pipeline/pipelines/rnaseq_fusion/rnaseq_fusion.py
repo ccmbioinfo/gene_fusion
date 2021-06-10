@@ -465,7 +465,8 @@ Cicero.sh -n {threads} -b {bamfile} \\\n -g {genome} \\\n -r {reference} \\\n  -
                                    files_to_keep=" ".join([
                                        junction_file,
                                        os.path.join(cicero_dir, "0*.{err,log}"),  # Logs
-                                       os.path.join(cicero_dir, "CICERO_DATADIR", sample.name, "*.{txt,tab,html}")  #
+                                       os.path.join(cicero_dir, "CICERO_DATADIR",
+                                                    sample.name, "*.{txt,frame.tab,html}")  #
                                        # Result files
                                        ]),
                                    target_dir=output_dir
