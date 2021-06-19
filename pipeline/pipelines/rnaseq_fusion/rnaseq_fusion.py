@@ -828,6 +828,7 @@ Cicero.sh -n {threads} -b {bamfile} \\\n -g {genome} \\\n -r {reference} \\\n  -
             arriba_result = os.path.join("fusions", "arriba", sample.name, "fusions.tsv")
             star_fusion_result = os.path.join("fusions", "star_fusion", sample.name,
                                               "star-fusion.fusion_predictions.abridged.coding_effect.tsv")
+            cicero_result = os.path.join("fusions", "cicero", sample.name, "final_fusions.txt")
 
             # result_file_list = [defuse_result, fusionmap_result, ericscript_result, integrate_result,
             #                     star_seqr_result, arriba_result, star_fusion_result]
@@ -840,6 +841,8 @@ Cicero.sh -n {threads} -b {bamfile} \\\n -g {genome} \\\n -r {reference} \\\n  -
             # job = concat_jobs([
             #    Job(command="mkdir -p delete_fastqs")
             # ], name="delete_fastqs." + sample.name)
+            job.input_files = [defuse_result, fusionmap_result, ericscript_result, integrate_result,
+                               star_seqr_result, arriba_result, star_fusion_result, cicero_result]
             jobs.append(job)
             # DELETE BAMS JOB (one across all samples)
         del_bams_job = concat_jobs([
