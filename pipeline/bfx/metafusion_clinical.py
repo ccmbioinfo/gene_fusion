@@ -34,7 +34,8 @@ def run_metafusion_clinical(out_dir_abspath, database, genome_fasta=None, gene_i
 
     cff = os.path.join("fusions", "cff", "merged.cff")
     cff_abspath = os.path.join(out_dir_abspath, "fusions", "cff", "merged.cff")
-    code_dir="/hpf/largeprojects/ccmbio/mapostolides/MetaFusion.clinical/"
+    #code_dir="/hpf/largeprojects/ccmbio/mapostolides/MetaFusion.clinical/"
+    code_dir="/hpf/largeprojects/ccmbio/MetaFusion_clinical/MetaFusion-Clinical"
     reference_file_dir="/hpf/largeprojects/ccmbio/mapostolides/MetaFusion/reference_files"
     db_dir=os.path.dirname(database)
 
@@ -46,7 +47,7 @@ def run_metafusion_clinical(out_dir_abspath, database, genome_fasta=None, gene_i
 module load Singularity; \\
 top_dir=$(echo $PWD); \\
 cd {code_dir}/scripts ;\\
-singularity exec -B /home -B {code_dir} -B /tmp  -B /localhd/tmp -B {cff_dir_abspath} -B {metafusion_outdir_abspath} -B {reference_file_dir} -B {db_dir} /hpf/largeprojects/ccmbio/mapostolides/MetaFusion.clinical/MetaFusion.clinical.simg \\
+singularity exec -B /home -B {code_dir} -B /tmp  -B /localhd/tmp -B {cff_dir_abspath} -B {metafusion_outdir_abspath} -B {reference_file_dir} -B {db_dir} {code_dir}/MetaFusion.clinical.simg \\
 bash MetaFusion.clinical.sh --outdir {metafusion_outdir_abspath} \\
   --cff {cff} \\
   --gene_bed {gene_bed} \\
