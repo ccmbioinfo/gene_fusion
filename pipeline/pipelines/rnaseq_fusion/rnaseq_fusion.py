@@ -337,9 +337,9 @@ class RnaFusion(Illumina):
             if sample.readsets[0].bam:  # .bam input
                 fastq_dir = os.path.join("fusions", "picard_sam_to_fastq", sample.name)
                 bam = sample.readsets[0].bam
-                left_fastq = os.path.join(self._output_dir, fastq_dir,
+                left_fastq = os.path.join(fastq_dir,
                                           os.path.basename(re.sub(r"\.bam$", ".pair1.fastq.gz", bam)))
-                right_fastq = os.path.join(self._output_dir, fastq_dir,
+                right_fastq = os.path.join(fastq_dir,
                                            os.path.basename(re.sub(r"\.bam$", ".pair1.fastq.gz", bam)))
             elif sample.readsets[0].fastq2 and sample.readsets[0].fastq2.split(".")[-1] == "gz":
                 left_fastq = sample.readsets[0].fastq1
@@ -384,9 +384,9 @@ class RnaFusion(Illumina):
             if sample.readsets[0].bam:  # .bam input
                 fastq_dir = os.path.join("fusions", "picard_sam_to_fastq", sample.name)
                 bam = sample.readsets[0].bam
-                fq1 = os.path.join(self._output_dir, fastq_dir,
+                fq1 = os.path.join(fastq_dir,
                                    os.path.basename(re.sub(r"\.bam$", ".pair1.fastq.gz", bam)))
-                fq2 = os.path.join(self._output_dir, fastq_dir,
+                fq2 = os.path.join(fastq_dir,
                                    os.path.basename(re.sub(r"\.bam$", ".pair1.fastq.gz", bam)))
             elif sample.readsets[0].fastq2 and sample.readsets[0].fastq2.split(".")[-1] == "gz":
                 fq1 = sample.readsets[0].fastq1
