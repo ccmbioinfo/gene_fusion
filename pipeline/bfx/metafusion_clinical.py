@@ -44,7 +44,7 @@ def run_metafusion_clinical(out_dir_abspath, database, genome_fasta=None, gene_i
         ["final.n" +str(num_tools) +".cluster"],
         [],
         command="""\
-module load Singularity; \\
+module load Singularity/3.11.3_slurm; \\
 top_dir=$(echo $PWD); \\
 cd {code_dir}/scripts ;\\
 singularity exec -B /home -B {code_dir} -B /tmp  -B /localhd/tmp -B {cff_dir_abspath} -B {metafusion_outdir_abspath} -B {reference_file_dir} -B {db_dir} {code_dir}/MetaFusion.clinical.simg \\
